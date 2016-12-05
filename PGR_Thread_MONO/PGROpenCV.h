@@ -6,7 +6,7 @@
 
 #define DOT_SIZE 150
 #define A_THRESH_VAL -5
-#define DOT_THRESH_VAL_MIN 20  // ƒhƒbƒgƒmƒCƒY’e‚«
+#define DOT_THRESH_VAL_MIN 200  // ƒhƒbƒgƒmƒCƒY’e‚«
 #define DOT_THRESH_VAL_MAX 500 // ƒGƒbƒWƒmƒCƒY’e‚«
 #define RESIZESCALE 0.5
 
@@ -95,7 +95,7 @@ public:
 	float getGain();
 	void getWhiteBalance(int &r, int &b);
 	float getFramerate();
-	void showCapImg(cv::Mat cap = cv::Mat());	//ŽB‰e‰æ‘œ‚ð•\Ž¦
+	void showCapImg(std::string winname, cv::Mat cap = cv::Mat());	//ŽB‰e‰æ‘œ‚ð•\Ž¦
 	void CameraCapture(cv::Mat &image);			// ŽB‰e‰æ‘œ‚ðMat‚ÅŽæ“¾
 
 	//cv::Mat getVideo(){ return fc2Mat; };

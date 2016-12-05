@@ -362,14 +362,14 @@ void TPGROpenCV::setFrameRate(float framerate)
 	fc2Cam.SetProperty(&fc2Prop);
 }
 
-void TPGROpenCV::showCapImg(cv::Mat cap)
+void TPGROpenCV::showCapImg(std::string winname, cv::Mat cap)
 {
 	//cv::namedWindow(windowNameCamera.c_str(), cv::WINDOW_NORMAL);
 	//引き数に何も指定しなかった場合はここで撮影画像を取得
 	//if (cap.data == NULL)
 	//	cap = getVideo();
-	//cv::resize(cap, cap, cv::Size(), 0.8, 0.8);
-	cv::imshow(windowNameCamera, cap);
+	cv::resize(cap, cap, cv::Size(), 0.8, 0.8);
+	cv::imshow(winname, cap);
 	cv::waitKey(1);
 
 }
@@ -482,8 +482,13 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 				sum = cv::Point(0, 0); cnt = 0; min = cv::Point(j, i); max = cv::Point(j, i);
 				calCoG_dot_v0(ptsImg, sum, cnt, min, max, cv::Point(j, i));
 				if (cnt>dots_thresh_min && max.x - min.x < dots_thresh_max && max.y - min.y < dots_thresh_max) {
-					dots.push_back(cv::Point(sum.x / cnt, sum.y / cnt));
-					//dots.push_back(cv::Point((int)((float)(sum.x / cnt) / resizeScale + 0.5), (int)((float)(sum.y / cnt) / resizeScale + 0.5)));
+
+					//検出した点が壁の汚れである可能性があるので、色で識別する
+					if(src.at<uchar>(i, j) >= 70)//->モノクロじゃ厳しい
+					{
+						dots.push_back(cv::Point(sum.x / cnt, sum.y / cnt));
+						//dots.push_back(cv::Point((int)((float)(sum.x / cnt) / resizeScale + 0.5), (int)((float)(sum.y / cnt) / resizeScale + 0.5)));
+					}
 
 				}
 			}
@@ -515,9 +520,9 @@ void TPGROpenCV::calCoG_dot_v0(cv::Mat &src, cv::Point& sum, int& cnt, cv::Point
 		if (p.y>max.y) max.y = p.y;
 
 		if (p.x - 1 >= 0) calCoG_dot_v0(src, sum, cnt, min, max, cv::Point(p.x-1, p.y));
-		if (p.x + 1 < CAMERA_WIDTH) calCoG_dot_v0(src, sum, cnt, min, max, cv::Point(p.x + 1, p.y));
+		if (p.x + 1 < src.cols) calCoG_dot_v0(src, sum, cnt, min, max, cv::Point(p.x + 1, p.y));
 		if (p.y - 1 >= 0) calCoG_dot_v0(src, sum, cnt, min, max, cv::Point(p.x, p.y - 1));
-		if (p.y + 1 < CAMERA_HEIGHT) calCoG_dot_v0(src, sum, cnt, min, max, cv::Point(p.x, p.y + 1));
+		if (p.y + 1 < src.rows) calCoG_dot_v0(src, sum, cnt, min, max, cv::Point(p.x, p.y + 1));
 	}
 }
 

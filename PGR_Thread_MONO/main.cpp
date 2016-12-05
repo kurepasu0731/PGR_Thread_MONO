@@ -12,7 +12,7 @@
 
 #define DOT_SIZE 150
 #define A_THRESH_VAL -5
-#define DOT_THRESH_VAL_MIN 20  // ドットノイズ弾き
+#define DOT_THRESH_VAL_MIN 200  // ドットノイズ弾き
 #define DOT_THRESH_VAL_MAX 500 // エッジノイズ弾き
 
 
@@ -179,7 +179,7 @@ int main( int argc, char* argv[] )
 	cv::Mat cap;
 
 	// initialization
-	pgrOpenCV.init(FlyCapture2::PIXEL_FORMAT_RGB8, FlyCapture2::HQ_LINEAR); //**
+	pgrOpenCV.init(FlyCapture2::PIXEL_FORMAT_MONO8, FlyCapture2::HQ_LINEAR); //**
 	// start capturing
 	pgrOpenCV.start();
 	for( ;; ) {
@@ -200,8 +200,8 @@ int main( int argc, char* argv[] )
 			//適応的二値化
 			//adaptiveThresholdTest(currFrameGray);
 
-			pgrOpenCV.showCapImg(frame);
-			pgrOpenCV.showCapImg(result);
+			pgrOpenCV.showCapImg("src", frame);
+			pgrOpenCV.showCapImg("result", result);
 
 		}
 
