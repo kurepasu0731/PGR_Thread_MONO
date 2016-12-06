@@ -11,7 +11,7 @@ TPGROpenCV::TPGROpenCV(int _useCameraIndex)
 
 	critical_section = boost::shared_ptr<criticalSection> (new criticalSection);
 	imgsrc = boost::shared_ptr<imgSrc>(new imgSrc);
-	imgsrc->image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC1);//元画像**
+	imgsrc->image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC3);//元画像**
 	imgsrc->result_image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC3);//ドット検出結果画像
 	imgsrc->dotsCount = 0;
 	imgsrc->dots_data.clear();
@@ -411,8 +411,11 @@ void TPGROpenCV::threadFunction()
 
 		lock.unlock();
 
+		cv::Mat color;
+		cv::cvtColor(fc2Mat, color, CV_GRAY2RGB);
+
 		imgsrc->result_image = drawimage;
-		imgsrc->image = fc2Mat;
+		imgsrc->image = color;//Unity側に渡すときはカラーで渡すことにする？
 		imgsrc->dotsCount = dots.size();
 		////vectorからint配列に(x,y,x,y,…の順)
 		//data.clear();
@@ -459,11 +462,16 @@ void TPGROpenCV::getDotsData(std::vector<int> &data)
 bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, int dots_thresh_min, int dots_thresh_max, float resizeScale, cv::Mat &drawimage)
 {
 	dots.clear();
-	//cv::Mat gray;//**
-	//cv::cvtColor(src, gray, CV_RGB2GRAY);//**
+	cv::Mat tmp, hsv;//, resizedhsv;
+	cv::cvtColor(src, tmp, CV_GRAY2BGR);
+	cv::cvtColor(tmp, hsv, CV_BGR2HSV);
+	//cv::resize(hsv, resizedhsv, cv::Size(), RESIZESCALE, RESIZESCALE);
+
+	//tmp = src.clone();
+
 	//リサイズ
 	cv::Mat resized;
-	cv::resize(src, resized, cv::Size(), resizeScale, resizeScale);//**
+	cv::resize(src, resized, cv::Size(), resizeScale, resizeScale);
 	//適応的閾値処理
 	cv::adaptiveThreshold(resized, resized, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 7, C);
 	//膨張処理
@@ -473,6 +481,7 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 	cv::resize(resized, ptsImg, cv::Size(), 1/resizeScale, 1/resizeScale);
 	cv::Mat ptsImgColor; 
 	cv::cvtColor(ptsImg, ptsImgColor, CV_GRAY2BGR);
+
 
 	cv::Point sum, min, max, p;
 	int cnt;
@@ -484,9 +493,17 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 				if (cnt>dots_thresh_min && max.x - min.x < dots_thresh_max && max.y - min.y < dots_thresh_max) {
 
 					//検出した点が壁の汚れである可能性があるので、色で識別する
-					if(src.at<uchar>(i, j) >= 70)//->モノクロじゃ厳しい
+					int x = sum.x / cnt;
+					int y = sum.y / cnt;
+					int index = hsv.step * y + (x * 3);
+
+					//std::cout << (unsigned int)tmp.at<uchar>(i, j) << std::endl;
+
+					//検出した点が壁の汚れである可能性があるので、色で識別する
+					//if((unsigned int)tmp.at<uchar>(i, j) >= 150)
+					if(hsv.data[index + 2] >= 100)
 					{
-						dots.push_back(cv::Point(sum.x / cnt, sum.y / cnt));
+						dots.push_back(cv::Point(x, y));
 						//dots.push_back(cv::Point((int)((float)(sum.x / cnt) / resizeScale + 0.5), (int)((float)(sum.y / cnt) / resizeScale + 0.5)));
 					}
 
@@ -495,6 +512,8 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 		}
 	}
 
+	//std::cout << "-------" << std::endl;
+		
 
 	std::vector<cv::Point>::iterator it = dots.begin();	
 	bool k = (dots.size() >= 20);

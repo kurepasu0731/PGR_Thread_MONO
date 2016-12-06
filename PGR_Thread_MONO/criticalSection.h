@@ -18,7 +18,7 @@ public:
 	criticalSection()
 	{
 		imgsrc = boost::shared_ptr<imgSrc>(new imgSrc);
-		imgsrc->image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC1);//**
+		imgsrc->image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC3);//**
 		imgsrc->result_image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC3);
 
 		//image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC3);
