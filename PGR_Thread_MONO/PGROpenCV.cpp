@@ -15,6 +15,7 @@ TPGROpenCV::TPGROpenCV(int _useCameraIndex)
 	imgsrc->result_image = cv::Mat::zeros(CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC3);//ドット検出結果画像
 	imgsrc->dotsCount = 0;
 	imgsrc->dots_data.clear();
+	element = cv::Mat(3,3,CV_8U, cv::Scalar(1)); //3*3以上だととスタックオーバーフローする
 
 	dots.clear();
 
@@ -397,17 +398,26 @@ void TPGROpenCV::CameraCapture(cv::Mat &image)
 	memcpy(image.data, cvtImage.GetData(), cvtImage.GetDataSize());
 }
 
-void TPGROpenCV::threadFunction()
+void TPGROpenCV::threadFunction() //ここの処理は(リサイズなしで)25ms程度。リサイズありだと32msくらい
 {
 	while(!quit)
 	{
+		tm.restart();
+
 		boost::shared_ptr<imgSrc> imgsrc = boost::shared_ptr<imgSrc>(new imgSrc);
 		boost::unique_lock<boost::mutex> lock(mutex);
 		queryFrame();
 
+		//std::cout << "queryFrame:" << std::ends;
+		//tm.elapsed();
+		//tm.restart();
+
 		//ドット検出
 		cv::Mat drawimage;
 		getDots(fc2Mat, dots, A_THRESH_VAL, DOT_THRESH_VAL_MIN, DOT_THRESH_VAL_MAX, RESIZESCALE, drawimage);
+
+		//std::cout << "getDots:" << std::ends;
+		//tm.elapsed();
 
 		lock.unlock();
 
@@ -428,6 +438,8 @@ void TPGROpenCV::threadFunction()
 		}
 
 		critical_section->setImageSource(imgsrc);
+
+		tm.elapsed();
 	}
 }
 
@@ -461,6 +473,7 @@ void TPGROpenCV::getDotsData(std::vector<int> &data)
 //**ドット検出関連**//
 bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, int dots_thresh_min, int dots_thresh_max, float resizeScale, cv::Mat &drawimage)
 {
+	//※srcは長いこといじっちゃだめ！
 	dots.clear();
 	cv::Mat tmp, hsv;//, resizedhsv;
 	cv::cvtColor(src, tmp, CV_GRAY2BGR);
@@ -469,27 +482,27 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 
 	//tmp = src.clone();
 
-	//リサイズ
+	//リサイズ->しない方がいい気がして。
 	cv::Mat resized;
-	cv::resize(src, resized, cv::Size(), resizeScale, resizeScale);
+	//cv::resize(src, resized, cv::Size(), resizeScale, resizeScale);
 	//適応的閾値処理
-	cv::adaptiveThreshold(resized, resized, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 7, C);
+	cv::adaptiveThreshold(src, resized, 255, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 7, C);
 	//膨張処理
 	cv::dilate(resized, resized, cv::Mat());
 	//原寸大に戻す
-	cv::Mat ptsImg = cv::Mat::zeros( CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC1); //原寸大表示用
-	cv::resize(resized, ptsImg, cv::Size(), 1/resizeScale, 1/resizeScale);
-	cv::Mat ptsImgColor; 
-	cv::cvtColor(ptsImg, ptsImgColor, CV_GRAY2BGR);
+	//cv::Mat ptsImg = cv::Mat::zeros( CAMERA_HEIGHT, CAMERA_WIDTH, CV_8UC1); //原寸大表示用
+	//cv::resize(resized, ptsImg, cv::Size(), 1/resizeScale, 1/resizeScale);
+	//cv::Mat ptsImgColor; 
+	//cv::cvtColor(ptsImg, ptsImgColor, CV_GRAY2BGR);
 
 
 	cv::Point sum, min, max, p;
 	int cnt;
-	for (int i = 0; i < ptsImg.rows; i++) {
-		for (int j = 0; j < ptsImg.cols; j++) {
-			if (ptsImg.at<uchar>(i, j)) {
+	for (int i = 0; i < resized.rows; i++) {
+		for (int j = 0; j < resized.cols; j++) {
+			if (resized.at<uchar>(i, j)) {
 				sum = cv::Point(0, 0); cnt = 0; min = cv::Point(j, i); max = cv::Point(j, i);
-				calCoG_dot_v0(ptsImg, sum, cnt, min, max, cv::Point(j, i));
+				calCoG_dot_v0(resized, sum, cnt, min, max, cv::Point(j, i));
 				if (cnt>dots_thresh_min && max.x - min.x < dots_thresh_max && max.y - min.y < dots_thresh_max) {
 
 					//検出した点が壁の汚れである可能性があるので、色で識別する
@@ -501,7 +514,7 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 
 					//検出した点が壁の汚れである可能性があるので、色で識別する
 					//if((unsigned int)tmp.at<uchar>(i, j) >= 150)
-					if(hsv.data[index + 2] >= 100)
+					if(hsv.data[index + 2] >= DOT_THRESH_VAL_BRIGHT)
 					{
 						dots.push_back(cv::Point(x, y));
 						//dots.push_back(cv::Point((int)((float)(sum.x / cnt) / resizeScale + 0.5), (int)((float)(sum.y / cnt) / resizeScale + 0.5)));
@@ -520,10 +533,10 @@ bool TPGROpenCV::getDots(cv::Mat &src, std::vector<cv::Point> &dots, double C, i
 	// 描画
 	cv::Scalar color = k ? cv::Scalar(255, 0, 0) : cv::Scalar(0, 255, 0);
 	for (it = dots.begin(); it != dots.end(); ++it) {
-		cv::circle(ptsImgColor, *it, 3, color, 2);
+		cv::circle(tmp, *it, 3, color, 2);
 	}
 	
-	drawimage = ptsImgColor;
+	drawimage = tmp;
 
 	return k;
 }

@@ -8,6 +8,7 @@
 #define A_THRESH_VAL -5
 #define DOT_THRESH_VAL_MIN 50  // ドットノイズ弾き
 #define DOT_THRESH_VAL_MAX 500 // エッジノイズ弾き
+#define DOT_THRESH_VAL_BRIGHT 100 //ドット点の明るさ
 #define RESIZESCALE 1.0
 
 
@@ -56,6 +57,9 @@ private:
 	//double A_THRESH_VAL;
 	//int DOT_THRESH_VAL_MIN;  // ドットノイズ弾き
 	//int DOT_THRESH_VAL_MAX; // エッジノイズ弾き
+
+	//膨張処理のカーネル
+	cv::Mat element;
 
 	std::vector<cv::Point> dots;
 	std::vector<int> data;

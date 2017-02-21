@@ -12,8 +12,9 @@
 
 #define DOT_SIZE 150
 #define A_THRESH_VAL -5
-#define DOT_THRESH_VAL_MIN 200  // ドットノイズ弾き
+#define DOT_THRESH_VAL_MIN 50  // ドットノイズ弾き
 #define DOT_THRESH_VAL_MAX 500 // エッジノイズ弾き
+#define DOT_THRESH_VAL_BRIGHT 100 //ドット点の明るさ
 
 
 
@@ -183,12 +184,14 @@ int main( int argc, char* argv[] )
 	// start capturing
 	pgrOpenCV.start();
 	for( ;; ) {
-		pgrOpenCV.tm.restart();
+		//pgrOpenCV.tm.restart();
 
 		//pgrOpenCV.queryFrame();
 		//critical_section->getImageSource(imgsrc);
 		cv::Mat frame = pgrOpenCV.getVideo();//元画像
-		cv::Mat result = pgrOpenCV.getResultVideo();//ドット検出結果
+		cv::Mat result = pgrOpenCV.getResultVideo();//ドット検出結果 //取ってくるだけだったら1msとか
+
+		//pgrOpenCV.tm.elapsed();
 
 		//適応的閾値処理と普通の二値化の比較
 		//adaptiveThresholdTest(pgrOpenCV.getVideo());
@@ -205,7 +208,6 @@ int main( int argc, char* argv[] )
 
 		}
 
-		pgrOpenCV.tm.elapsed();
 
 		//int count = pgrOpenCV.getDotsCount();
 		//std::cout << "count:" << count << std::endl;
